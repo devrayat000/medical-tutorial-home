@@ -28,8 +28,7 @@ class AsyncBuilder<T extends Object?> extends StatelessWidget {
             return loadingBuilder(context);
           case ConnectionState.done:
             if (snapshot.hasError) {
-              log('Error', error: snapshot.error);
-              return errorBuilder(context, snapshot.error);
+              throw errorHandler(snapshot.error!, snapshot.stackTrace);
             } else if (snapshot.hasData) {
               return builder(context, snapshot.data!);
             } else {

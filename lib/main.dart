@@ -1,17 +1,15 @@
+import 'dart:async';
 import 'dart:io';
 
-import 'package:android_intent_plus/android_intent.dart';
 import 'package:dio/dio.dart';
 import 'package:dio_cache_interceptor/dio_cache_interceptor.dart';
 import 'package:dio_logger/dio_logger.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:go_router/go_router.dart';
 import 'package:study_helper/src/screens/router.dart';
 import 'package:study_helper/src/services/api.dart';
-import 'package:study_helper/src/utils/theme.dart';
-import 'package:url_launcher/link.dart';
 import 'package:flutter_native_splash/flutter_native_splash.dart';
+import 'package:study_helper/src/utils/exception.dart';
 
 // Global options
 final options = CacheOptions(
@@ -26,23 +24,60 @@ final options = CacheOptions(
 );
 
 void main() {
-  final widgetsBinding = WidgetsFlutterBinding.ensureInitialized();
-  FlutterNativeSplash.preserve(widgetsBinding: widgetsBinding);
+  runZonedGuarded(() async {
+    final widgetsBinding = WidgetsFlutterBinding.ensureInitialized();
+    FlutterNativeSplash.preserve(widgetsBinding: widgetsBinding);
 
-  final _dio = Dio();
-  _dio
-    ..interceptors.add(DioCacheInterceptor(options: options))
-    ..interceptors.add(dioLoggerInterceptor);
+    final _dio = Dio();
+    _dio
+      ..interceptors.add(DioCacheInterceptor(options: options))
+      ..interceptors.add(dioLoggerInterceptor);
 
-  FlutterNativeSplash.remove();
+    FlutterError.onError = (FlutterErrorDetails details) {
+      FlutterError.presentError(details);
+      exit(1);
+    };
 
-  runApp(
-    RepositoryProvider(
-      create: (_) =>
-          RestClient(_dio, baseUrl: 'https://mtrcrm.herokuapp.com/api/'),
-      child: const MyApp(),
-    ),
-  );
+    // Set the ErrorWidget's builder before the app is started.
+    ErrorWidget.builder = (details) {
+      // This is how to tell if you're in debug mode: Assertions are only executed in
+      // debug mode.
+      bool inDebug = false;
+      assert(() {
+        inDebug = true;
+        return true;
+      }());
+      // If we're in debug mode, use the normal error widget which shows the error
+      // message:
+      if (inDebug) {
+        return ErrorWidget(details.exception);
+      }
+
+      final e = details.exception;
+      // In release builds, show a yellow-on-blue message instead:
+      return Container(
+        alignment: Alignment.center,
+        child: Text(
+          e is AppException ? e.message : 'Error!\n${details.exception}',
+          style: const TextStyle(color: Colors.white),
+          textAlign: TextAlign.center,
+          textDirection: TextDirection.ltr,
+        ),
+      );
+    };
+
+    FlutterNativeSplash.remove();
+
+    runApp(
+      RepositoryProvider(
+        create: (_) =>
+            RestClient(_dio, baseUrl: 'https://mtrcrm.herokuapp.com/api/'),
+        child: const MyApp(),
+      ),
+    );
+  }, (Object error, StackTrace stack) {
+    exit(1);
+  });
 }
 
 class MyApp extends StatelessWidget {
@@ -71,84 +106,6 @@ class MyApp extends StatelessWidget {
       ),
       routerDelegate: router.routerDelegate,
       routeInformationParser: router.routeInformationParser,
-    );
-  }
-
-  static final _router = GoRouter(
-    routes: [
-      GoRoute(
-        path: '/',
-        builder: (_, state) =>
-            const MyHomePage(title: 'Flutter Demo Home Page'),
-      ),
-    ],
-  );
-}
-
-class MyHomePage extends StatefulWidget {
-  const MyHomePage({Key? key, required this.title}) : super(key: key);
-
-  final String title;
-
-  @override
-  State<MyHomePage> createState() => _MyHomePageState();
-}
-
-class _MyHomePageState extends State<MyHomePage> {
-  int _counter = 0;
-
-  void _incrementCounter() {
-    setState(() {
-      _counter++;
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(widget.title),
-      ),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            const Text(
-              'You have pushed the button this many times:',
-            ),
-            Text(
-              '$_counter',
-              style: Theme.of(context).textTheme.headline4,
-            ),
-          ],
-        ),
-      ),
-      floatingActionButton: Row(
-        mainAxisAlignment: MainAxisAlignment.end,
-        children: [
-          Link(
-            uri: Uri.parse('https://www.youtube.com/watch?v=lY2yjAdbvdQ'),
-            builder: (_, onPressed) => FloatingActionButton(
-              onPressed: onPressed,
-              tooltip: 'Intent',
-              child: const Icon(Icons.add),
-            ),
-          ),
-          FloatingActionButton(
-            onPressed: () async {
-              if (Platform.isAndroid) {
-                const intent = AndroidIntent(
-                  action: 'action_view',
-                  data: 'https://www.youtube.com/watch?v=lY2yjAdbvdQ',
-                );
-                await intent.launch();
-              }
-            },
-            tooltip: 'Launcher',
-            child: const Icon(Icons.video_call),
-          ),
-        ],
-      ),
     );
   }
 }
