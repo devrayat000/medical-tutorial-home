@@ -49,7 +49,9 @@ class HomeScreen extends StatelessWidget {
                 PrimaryAction(
                   title: Text('All Lectures'),
                   icon: Icon(Icons.music_video),
-                  onPressed: () {},
+                  onPressed: () {
+                    context.push('/lecture');
+                  },
                 ),
               ],
             ),
