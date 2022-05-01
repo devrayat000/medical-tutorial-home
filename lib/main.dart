@@ -38,7 +38,8 @@ void main() {
 
   runApp(
     RepositoryProvider(
-      create: (_) => RestClient(_dio),
+      create: (_) =>
+          RestClient(_dio, baseUrl: 'https://mtrcrm.herokuapp.com/api/'),
       child: const MyApp(),
     ),
   );
@@ -53,7 +54,21 @@ class MyApp extends StatelessWidget {
     return MaterialApp.router(
       title: 'Study Helper',
       debugShowCheckedModeBanner: false,
-      theme: theme,
+      theme: ThemeData.dark().copyWith(
+        backgroundColor: const Color(0xFF253334),
+        scaffoldBackgroundColor: const Color(0xFF253334),
+        appBarTheme: const AppBarTheme(
+          color: Colors.transparent,
+          elevation: 0,
+        ),
+        textTheme: const TextTheme(
+          headline1: TextStyle(
+            color: Colors.white,
+            fontSize: 36,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ),
       routerDelegate: router.routerDelegate,
       routeInformationParser: router.routeInformationParser,
     );
